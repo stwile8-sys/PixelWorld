@@ -1,6 +1,7 @@
 package ru.snow.app
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -60,14 +61,14 @@ private fun Ico(res: Int, dp: Int, tint: androidx.glance.unit.ColorProvider) {
     )
 }
 
-private fun open() = actionStartActivity<MainActivity>()
+private fun open(c: Context) = actionStartActivity(Intent(c, MainActivity::class.java))
 
 @Composable
 private fun SmallContent(c: Context, w: Weather?, city: String?) {
     val p = Pal(c)
     val st = w?.status()
     Column(
-        GlanceModifier.fillMaxSize().background(p.bg).cornerRadius(24.dp).padding(14.dp).clickable(open())
+        GlanceModifier.fillMaxSize().background(p.bg).cornerRadius(24.dp).padding(14.dp).clickable(open(c))
     ) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Vertical.CenterVertically) {
             Text(city ?: "Снег", GlanceModifier.defaultWeight(), style = TextStyle(color = p.sec, fontSize = 13.sp), maxLines = 1)
@@ -89,7 +90,7 @@ private fun MediumContent(c: Context, w: Weather?, city: String?) {
     val p = Pal(c)
     val st = w?.status()
     Row(
-        GlanceModifier.fillMaxSize().background(p.bg).cornerRadius(24.dp).padding(16.dp).clickable(open())
+        GlanceModifier.fillMaxSize().background(p.bg).cornerRadius(24.dp).padding(16.dp).clickable(open(c))
     ) {
         Column(GlanceModifier.defaultWeight().fillMaxSize()) {
             Text(city ?: "Снег", style = TextStyle(color = p.sec, fontSize = 13.sp), maxLines = 1)
@@ -119,7 +120,7 @@ private fun LargeContent(c: Context, w: Weather?, city: String?) {
     val p = Pal(c)
     val st = w?.status()
     Column(
-        GlanceModifier.fillMaxSize().background(p.bg).cornerRadius(24.dp).padding(16.dp).clickable(open())
+        GlanceModifier.fillMaxSize().background(p.bg).cornerRadius(24.dp).padding(16.dp).clickable(open(c))
     ) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Vertical.Top) {
             Column(GlanceModifier.defaultWeight()) {
