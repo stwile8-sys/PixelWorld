@@ -44,11 +44,13 @@ class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
             .setRequiresBatteryNotLow(battery)
             .build()
 
-        fun schedule(c: Context) {
-            val req = PeriodicWorkRequestBuilder<RefreshWorker>(30, TimeUnit.MINUTES)
-                .setConstraints(constraints(true))
+        /** Раз в 15 минут — минимальный период фоновой работы в Android. */
+        fun schedule(c: Context, force: Boolean = false) {
+            if (!force && widgetCount(c) == 0) return
+            val req = PeriodicWorkRequestBuilder<RefreshWorker>(15, TimeUnit.MINUTES)
+                .setConstraints(constraints(false))
                 .build()
-            WorkManager.getInstance(c).enqueueUniquePeriodicWork(NAME, ExistingPeriodicWorkPolicy.KEEP, req)
+            WorkManager.getInstance(c).enqueueUniquePeriodicWork(NAME, ExistingPeriodicWorkPolicy.UPDATE, req)
         }
 
         fun runNow(c: Context) {

@@ -284,6 +284,31 @@ private fun MainContent(w: Weather, status: SnowStatus?, snowing: Boolean) {
             }
         }
     }
+    Spacer(Modifier.height(12.dp))
+    Block {
+        Text("История за 7 дней", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        val days = w.days()
+        if (days.isEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text("Нет данных", color = cs.onSurfaceVariant)
+        }
+        days.forEach { d ->
+            Spacer(Modifier.height(14.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(d.label, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                Text(
+                    d.snow,
+                    fontSize = 14.sp,
+                    color = if (d.snow == "Без снега") cs.onSurfaceVariant else cs.primary,
+                )
+            }
+            val sub = listOfNotNull(
+                if (d.min != null && d.max != null) "${fmtTemp(d.min)} … ${fmtTemp(d.max)}" else null,
+                d.periods,
+            ).joinToString(" · ")
+            if (sub.isNotEmpty()) Text(sub, fontSize = 13.sp, color = cs.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable

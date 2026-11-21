@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) RefreshWorker.schedule(this)
         if (savedInstanceState == null && vm.auto.value) {
             if (hasPermission() || Prefs.place(this) == null) requestLocation()
         }

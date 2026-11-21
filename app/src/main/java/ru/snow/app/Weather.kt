@@ -34,7 +34,10 @@ data class Weather(
     val snowfall: Double?,
     val now: Long,
     val hours: List<Hour>,
+    val history: List<Hour>,
 )
+
+data class DaySummary(val label: String, val min: Double?, val max: Double?, val snow: String, val periods: String?)
 
 private val SNOW_CODES = setOf(71, 73, 75, 77, 85, 86)
 
@@ -52,14 +55,14 @@ fun parseWeather(raw: JSONObject, city: String, updatedAt: Long): Weather {
     val temps = hr?.optJSONArray("temperature_2m")
     val codes = hr?.optJSONArray("weather_code")
     val snows = hr?.optJSONArray("snowfall")
-    val hours = ArrayList<Hour>()
+    val all = ArrayList<Hour>()
     if (times != null) {
         for (i in 0 until times.length()) {
-            val t = times.optLong(i)
-            if (t < now - 3599) continue
-            hours.add(Hour(t, temps?.numAt(i), codes?.numAt(i)?.toInt(), snows?.numAt(i)))
+            all.add(Hour(times.optLong(i), temps?.numAt(i), codes?.numAt(i)?.toInt(), snows?.numAt(i)))
         }
     }
+    val hours = all.filter { it.time >= now - 3599 }
+    val history = all.filter { it.time <= now }
     return Weather(
         city = city,
         updatedAt = updatedAt,
@@ -72,7 +75,52 @@ fun parseWeather(raw: JSONObject, city: String, updatedAt: Long): Weather {
         snowfall = cur?.num("snowfall"),
         now = now,
         hours = hours.take(24),
+        history = history,
     )
+}
+
+/** История по дням (сегодня первым): температура и когда шёл снег. Данные модели Open-Meteo за последние 7 суток. */
+fun Weather.days(): List<DaySummary> {
+    val zone = TimeZone.getTimeZone(tz)
+    val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = zone }
+    val dayFmt = SimpleDateFormat("d MMMM", Locale("ru")).apply { timeZone = zone }
+    fun k(sec: Long) = key.format(Date(sec * 1000))
+    val today = k(now)
+    val yesterday = k(now - 86400)
+    val groups = history.sortedBy { it.time }.groupBy { k(it.time) }
+    return groups.entries.sortedByDescending { it.key }.map { (d, hs) ->
+        val periods = ArrayList<String>()
+        var start = -1L
+        var last = -1L
+        for (h in hs) {
+            if (h.snowy) {
+                if (start < 0) start = h.time
+                last = h.time
+            } else if (start >= 0) {
+                periods.add("${fmtHour(start)}–${fmtHour(last + 3600)}")
+                start = -1
+            }
+        }
+        if (start >= 0) periods.add("${fmtHour(start)}–${fmtHour(last + 3600)}")
+        val cm = hs.sumOf { it.snowfall ?: 0.0 }
+        val snow = when {
+            cm >= 0.05 -> String.format(Locale("ru"), "Снег %.1f см", cm)
+            periods.isNotEmpty() -> "Снег"
+            else -> "Без снега"
+        }
+        val label = when (d) {
+            today -> "Сегодня"
+            yesterday -> "Вчера"
+            else -> dayFmt.format(Date(hs.first().time * 1000))
+        }
+        DaySummary(
+            label = label,
+            min = hs.mapNotNull { it.temp }.minOrNull(),
+            max = hs.mapNotNull { it.temp }.maxOrNull(),
+            snow = snow,
+            periods = periods.take(3).joinToString(", ").ifEmpty { null },
+        )
+    }
 }
 
 /** Статус снега по данным: код погоды и количество осадков, а не только температура. Null — нет данных. */

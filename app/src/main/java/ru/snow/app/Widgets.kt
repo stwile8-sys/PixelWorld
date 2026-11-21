@@ -197,7 +197,7 @@ class LargeWidget : GlanceAppWidget() {
 abstract class BaseReceiver : GlanceAppWidgetReceiver() {
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        RefreshWorker.schedule(context)
+        RefreshWorker.schedule(context, force = true)
         RefreshWorker.runNow(context)
     }
 }
