@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Снег</string>
+    <string name="widget_small_label">Снег · компактный</string>
+    <string name="widget_medium_label">Снег · средний</string>
+    <string name="widget_large_label">Снег · большой</string>
+    <string name="widget_small_desc">Город, температура и статус снега</string>
+    <string name="widget_medium_desc">Статус снега, ветер и ощущаемая температура</string>
+    <string name="widget_large_desc">Статус снега, ветер и почасовой прогноз</string>
+</resources>
