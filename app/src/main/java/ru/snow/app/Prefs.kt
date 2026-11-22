@@ -39,7 +39,10 @@ object Prefs {
             .putString("place_lon", p.lon.toString())
             .putBoolean("auto", auto)
         // Сохранённая погода относится к старому месту — сбрасываем, если место заметно сменилось.
-        if (old == null || abs(old.lat - p.lat) > 0.05 || abs(old.lon - p.lon) > 0.05) e.remove("snap")
+        if (old == null || abs(old.lat - p.lat) > 0.05 || abs(old.lon - p.lon) > 0.05) {
+            e.remove("snap")
+            e.remove("climo")
+        }
         e.apply()
     }
 
@@ -47,10 +50,29 @@ object Prefs {
         val s = sp(c).getString("snap", null) ?: return null
         return try {
             val j = JSONObject(s)
-            parseWeather(j.getJSONObject("raw"), j.getString("city"), j.getLong("at"))
+            Climo.withTypical(c, parseWeather(j.getJSONObject("raw"), j.getString("city"), j.getLong("at")))
         } catch (e: Exception) {
             null
         }
+    }
+
+    class ClimoData(val lat: Double, val lon: Double, val at: Long, val end: Int, val days: IntArray)
+
+    fun climo(c: Context): ClimoData? {
+        val s = sp(c).getString("climo", null) ?: return null
+        return try {
+            val j = JSONObject(s)
+            val a = j.getJSONArray("days")
+            ClimoData(j.getDouble("lat"), j.getDouble("lon"), j.getLong("at"), j.getInt("end"), IntArray(a.length()) { a.getInt(it) })
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun saveClimo(c: Context, p: Place, end: Int, days: List<Int>) {
+        val j = JSONObject().put("lat", p.lat).put("lon", p.lon).put("at", System.currentTimeMillis())
+            .put("end", end).put("days", org.json.JSONArray(days))
+        sp(c).edit().putString("climo", j.toString()).apply()
     }
 
     fun saveSnapshot(c: Context, raw: JSONObject, city: String, at: Long) {

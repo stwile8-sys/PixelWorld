@@ -15,6 +15,13 @@ object Repo {
             val now = Prefs.place(c)
             if (now == null || now.lat != p.lat || now.lon != p.lon) return@withContext false
             Prefs.saveSnapshot(c, raw, now.name, System.currentTimeMillis())
+            try {
+                Climo.ensure(c, now)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // статистика прошлых лет необязательна
+            }
             true
         } catch (e: CancellationException) {
             throw e

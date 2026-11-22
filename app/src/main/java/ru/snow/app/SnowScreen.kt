@@ -261,6 +261,11 @@ private fun MainContent(w: Weather, status: SnowStatus?, snowing: Boolean) {
             Spacer(Modifier.height(4.dp))
             Text(amount, fontSize = 14.sp, color = cs.onSurfaceVariant)
         }
+        val typical = w.typicalLine()
+        if (typical != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(typical, fontSize = 14.sp, color = cs.onSurfaceVariant)
+        }
     }
     Spacer(Modifier.height(12.dp))
     Block {
@@ -296,7 +301,7 @@ private fun MainContent(w: Weather, status: SnowStatus?, snowing: Boolean) {
         }
     }
     Spacer(Modifier.height(12.dp))
-    DayList("Прогноз на 7 дней", w.forecastDays())
+    DayList("Прогноз на 7 дней", w.forecastDays().take(7))
     Spacer(Modifier.height(12.dp))
     DayList("История за 7 дней", w.days())
 }

@@ -36,6 +36,8 @@ data class Weather(
     val hours: List<Hour>,
     val ahead: List<Hour>,
     val history: List<Hour>,
+    val typicalDate: String? = null,
+    val typicalYears: Int = 0,
 )
 
 data class DaySummary(val label: String, val min: Double?, val max: Double?, val snow: String, val periods: String?)
@@ -171,7 +173,7 @@ private fun Weather.whenText(sec: Long): String {
 private fun Weather.horizonText(): String {
     val last = ahead.lastOrNull()?.time ?: return ""
     val h = ((last - now) / 3600).toInt()
-    return if (h >= 150) "7 дней" else "$h ч"
+    return if (h >= 48) "${h / 24} дн." else "$h ч"
 }
 
 /** Начало ближайшего снега: если снег идёт сейчас — следующего после паузы. */
@@ -195,9 +197,23 @@ fun Weather.nextSnowBody(): String {
     if (n != null) return whenText(n.time)
     return when {
         status().snowing() && fut.all { it.snowy } -> "снег не прекратится в ближайшие ${horizonText()}"
-        status().snowing() -> "после этого снега в ближайшие ${horizonText()} не ожидается"
-        else -> "снега в ближайшие ${horizonText()} не ожидается"
+        status().snowing() -> "после этого в прогнозе на ${horizonText()} снега нет"
+        else -> "в прогнозе на ${horizonText()} снега нет"
     }
+}
+
+/** Если в прогнозе снега нет — когда он обычно приходит по данным прошлых лет. */
+fun Weather.typicalLine(): String? {
+    if (nextSnow() != null || ahead.none { it.time > now }) return null
+    val d = typicalDate ?: return null
+    return "Обычно снег приходит около $d (по данным за $typicalYears лет)"
+}
+
+/** Одна строка: ближайший снег, а при его отсутствии в прогнозе — типичная дата. */
+fun Weather.nextSnowLine(): String {
+    val base = "${nextSnowTitle()}: ${nextSnowBody()}"
+    val d = typicalDate
+    return if (nextSnow() == null && d != null && ahead.any { it.time > now }) "$base. Обычно около $d" else base
 }
 
 /** Короткая строка для виджетов. */
@@ -205,10 +221,12 @@ fun Weather.nextSnowShort(): String {
     val fut = ahead.filter { it.time > now }
     if (fut.isEmpty()) return "Ближайший снег: нет данных"
     val n = nextSnow()
+    val typ = typicalDate
     return when {
         n != null && status().snowing() -> "Снова ${whenText(n.time)}"
         n != null -> "Снег ${whenText(n.time)}"
         status().snowing() && fut.all { it.snowy } -> "Снег не прекратится ${horizonText()}"
+        typ != null -> "Обычно снег около $typ"
         status().snowing() -> "Затем без снега ${horizonText()}"
         else -> "Без снега ближайшие ${horizonText()}"
     }
