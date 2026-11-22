@@ -22,7 +22,7 @@ object Api {
     fun forecast(lat: Double, lon: Double): JSONObject = get(
         "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon" +
             "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,snowfall" +
-            "&hourly=temperature_2m,weather_code,snowfall&forecast_hours=24&past_hours=168" +
+            "&hourly=temperature_2m,weather_code,snowfall&forecast_hours=168&past_hours=168" +
             "&wind_speed_unit=ms&timeformat=unixtime&timezone=auto"
     )
 

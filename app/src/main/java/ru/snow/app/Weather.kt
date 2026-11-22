@@ -34,6 +34,7 @@ data class Weather(
     val snowfall: Double?,
     val now: Long,
     val hours: List<Hour>,
+    val ahead: List<Hour>,
     val history: List<Hour>,
 )
 
@@ -61,7 +62,7 @@ fun parseWeather(raw: JSONObject, city: String, updatedAt: Long): Weather {
             all.add(Hour(times.optLong(i), temps?.numAt(i), codes?.numAt(i)?.toInt(), snows?.numAt(i)))
         }
     }
-    val hours = all.filter { it.time >= now - 3599 }
+    val future = all.filter { it.time >= now - 3599 }
     val history = all.filter { it.time <= now }
     return Weather(
         city = city,
@@ -74,53 +75,139 @@ fun parseWeather(raw: JSONObject, city: String, updatedAt: Long): Weather {
         code = cur?.num("weather_code")?.toInt(),
         snowfall = cur?.num("snowfall"),
         now = now,
-        hours = hours.take(24),
+        hours = future.take(24),
+        ahead = future,
         history = history,
     )
 }
 
-/** История по дням (сегодня первым): температура и когда шёл снег. Данные модели Open-Meteo за последние 7 суток. */
+private fun Weather.dayKey(sec: Long): String =
+    SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone(tz) }.format(Date(sec * 1000))
+
+private fun Weather.summarize(label: String, hs: List<Hour>): DaySummary {
+    val periods = ArrayList<String>()
+    var start = -1L
+    var last = -1L
+    for (h in hs) {
+        if (h.snowy) {
+            if (start < 0) start = h.time
+            last = h.time
+        } else if (start >= 0) {
+            periods.add("${fmtHour(start)}–${fmtHour(last + 3600)}")
+            start = -1
+        }
+    }
+    if (start >= 0) periods.add("${fmtHour(start)}–${fmtHour(last + 3600)}")
+    val cm = hs.sumOf { it.snowfall ?: 0.0 }
+    val snow = when {
+        cm >= 0.05 -> String.format(Locale("ru"), "Снег %.1f см", cm)
+        periods.isNotEmpty() -> "Снег"
+        else -> "Без снега"
+    }
+    return DaySummary(
+        label = label,
+        min = hs.mapNotNull { it.temp }.minOrNull(),
+        max = hs.mapNotNull { it.temp }.maxOrNull(),
+        snow = snow,
+        periods = periods.take(3).joinToString(", ").ifEmpty { null },
+    )
+}
+
+private fun Weather.dayName(sec: Long): String {
+    val f = SimpleDateFormat("EEEE, d MMMM", Locale("ru")).apply { timeZone = TimeZone.getTimeZone(tz) }
+    return f.format(Date(sec * 1000)).cap()
+}
+
+/** История по дням (сегодня первым). Данные модели Open-Meteo за последние 7 суток. */
 fun Weather.days(): List<DaySummary> {
-    val zone = TimeZone.getTimeZone(tz)
-    val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = zone }
-    val dayFmt = SimpleDateFormat("d MMMM", Locale("ru")).apply { timeZone = zone }
-    fun k(sec: Long) = key.format(Date(sec * 1000))
-    val today = k(now)
-    val yesterday = k(now - 86400)
-    val groups = history.sortedBy { it.time }.groupBy { k(it.time) }
-    return groups.entries.sortedByDescending { it.key }.map { (d, hs) ->
-        val periods = ArrayList<String>()
-        var start = -1L
-        var last = -1L
-        for (h in hs) {
-            if (h.snowy) {
-                if (start < 0) start = h.time
-                last = h.time
-            } else if (start >= 0) {
-                periods.add("${fmtHour(start)}–${fmtHour(last + 3600)}")
-                start = -1
-            }
-        }
-        if (start >= 0) periods.add("${fmtHour(start)}–${fmtHour(last + 3600)}")
-        val cm = hs.sumOf { it.snowfall ?: 0.0 }
-        val snow = when {
-            cm >= 0.05 -> String.format(Locale("ru"), "Снег %.1f см", cm)
-            periods.isNotEmpty() -> "Снег"
-            else -> "Без снега"
-        }
-        val label = when (d) {
-            today -> "Сегодня"
-            yesterday -> "Вчера"
-            else -> dayFmt.format(Date(hs.first().time * 1000))
-        }
-        DaySummary(
-            label = label,
-            min = hs.mapNotNull { it.temp }.minOrNull(),
-            max = hs.mapNotNull { it.temp }.maxOrNull(),
-            snow = snow,
-            periods = periods.take(3).joinToString(", ").ifEmpty { null },
+    val today = dayKey(now)
+    val yesterday = dayKey(now - 86400)
+    return history.sortedBy { it.time }.groupBy { dayKey(it.time) }.entries.sortedByDescending { it.key }.map { (d, hs) ->
+        summarize(
+            when (d) {
+                today -> "Сегодня"
+                yesterday -> "Вчера"
+                else -> dayName(hs.first().time)
+            },
+            hs,
         )
     }
+}
+
+/** Прогноз по дням вперёд (сегодня первым). */
+fun Weather.forecastDays(): List<DaySummary> {
+    val today = dayKey(now)
+    val tomorrow = dayKey(now + 86400)
+    return ahead.sortedBy { it.time }.groupBy { dayKey(it.time) }.entries.sortedBy { it.key }.map { (d, hs) ->
+        summarize(
+            when (d) {
+                today -> "Сегодня"
+                tomorrow -> "Завтра"
+                else -> dayName(hs.first().time)
+            },
+            hs,
+        )
+    }
+}
+
+fun String.cap(): String = replaceFirstChar { it.uppercase() }
+
+private fun Weather.weekdayIn(sec: Long): String {
+    val c = java.util.Calendar.getInstance(TimeZone.getTimeZone(tz))
+    c.timeInMillis = sec * 1000
+    return arrayOf("в воскресенье", "в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу")[c.get(java.util.Calendar.DAY_OF_WEEK) - 1]
+}
+
+private fun Weather.whenText(sec: Long): String {
+    val k = dayKey(sec)
+    val time = fmtHour(sec)
+    return when (k) {
+        dayKey(now) -> "сегодня около $time"
+        dayKey(now + 86400) -> "завтра около $time"
+        else -> "${weekdayIn(sec)} около $time"
+    }
+}
+
+private fun Weather.horizonText(): String {
+    val last = ahead.lastOrNull()?.time ?: return ""
+    val h = ((last - now) / 3600).toInt()
+    return if (h >= 150) "7 дней" else "$h ч"
+}
+
+/** Начало ближайшего снега: если снег идёт сейчас — следующего после паузы. */
+fun Weather.nextSnow(): Hour? {
+    val fut = ahead.filter { it.time > now }
+    if (status().snowing()) {
+        val end = fut.indexOfFirst { !it.snowy }
+        if (end < 0) return null
+        return fut.drop(end).firstOrNull { it.snowy }
+    }
+    return fut.firstOrNull { it.snowy }
+}
+
+fun Weather.nextSnowTitle(): String = if (status().snowing()) "Следующий снег" else "Ближайший снег"
+
+/** Текст со строчной буквы; для отображения — .cap(). */
+fun Weather.nextSnowBody(): String {
+    val fut = ahead.filter { it.time > now }
+    if (fut.isEmpty()) return "нет данных"
+    val n = nextSnow()
+    if (n != null) return whenText(n.time)
+    return when {
+        status().snowing() && fut.all { it.snowy } -> "снег не прекратится в ближайшие ${horizonText()}"
+        status().snowing() -> "после этого снега в ближайшие ${horizonText()} не ожидается"
+        else -> "снега в ближайшие ${horizonText()} не ожидается"
+    }
+}
+
+fun Weather.nextSnowAmount(): String? {
+    val n = nextSnow() ?: return null
+    var cm = 0.0
+    for (h in ahead.filter { it.time >= n.time }) {
+        if (!h.snowy) break
+        cm += h.snowfall ?: 0.0
+    }
+    return if (cm >= 0.1) String.format(Locale("ru"), "Около %.1f см", cm) else null
 }
 
 /** Статус снега по данным: код погоды и количество осадков, а не только температура. Null — нет данных. */
@@ -170,13 +257,13 @@ fun Weather.hourLabel(h: Hour, index: Int): String = if (index == 0 && h.time <=
 fun Weather.detail(): String? {
     val st = status() ?: return null
     return when (st) {
-        SnowStatus.EXPECTED -> hours.firstOrNull { it.time > now && it.snowy }?.let { "Начнётся около ${fmtHour(it.time)}" }
+        SnowStatus.EXPECTED -> hours.firstOrNull { it.time > now && it.snowy }?.let { "Начнётся ${whenText(it.time)}" }
         SnowStatus.NONE -> null
         else -> {
-            val end = hours.firstOrNull { it.time > now && !it.snowy }
+            val end = ahead.firstOrNull { it.time > now && !it.snowy }
             when {
                 end != null -> "Закончится около ${fmtHour(end.time)}"
-                hours.any { it.time > now } -> "Снег продолжится"
+                ahead.any { it.time > now } -> "Снег продолжится"
                 else -> null
             }
         }

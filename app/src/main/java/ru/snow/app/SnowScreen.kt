@@ -251,7 +251,18 @@ private fun MainContent(w: Weather, status: SnowStatus?, snowing: Boolean) {
             Text(d, fontSize = 15.sp, color = cs.onSurfaceVariant)
         }
     }
-    Spacer(Modifier.height(28.dp))
+    Spacer(Modifier.height(24.dp))
+    Block {
+        Text(w.nextSnowTitle(), fontSize = 14.sp, color = cs.onSurfaceVariant)
+        Spacer(Modifier.height(6.dp))
+        Text(w.nextSnowBody().cap(), fontSize = 20.sp, fontWeight = FontWeight.Medium)
+        val amount = w.nextSnowAmount()
+        if (amount != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(amount, fontSize = 14.sp, color = cs.onSurfaceVariant)
+        }
+    }
+    Spacer(Modifier.height(12.dp))
     Block {
         Row(Modifier.fillMaxWidth()) {
             Stat("Ощущается", fmtTemp(w.feels) ?: "Нет данных", Modifier.weight(1f))
@@ -285,9 +296,16 @@ private fun MainContent(w: Weather, status: SnowStatus?, snowing: Boolean) {
         }
     }
     Spacer(Modifier.height(12.dp))
+    DayList("Прогноз на 7 дней", w.forecastDays())
+    Spacer(Modifier.height(12.dp))
+    DayList("История за 7 дней", w.days())
+}
+
+@Composable
+private fun DayList(title: String, days: List<DaySummary>) {
+    val cs = MaterialTheme.colorScheme
     Block {
-        Text("История за 7 дней", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        val days = w.days()
+        Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium)
         if (days.isEmpty()) {
             Spacer(Modifier.height(12.dp))
             Text("Нет данных", color = cs.onSurfaceVariant)

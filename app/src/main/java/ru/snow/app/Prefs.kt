@@ -16,6 +16,13 @@ object Prefs {
     fun auto(c: Context): Boolean = sp(c).getBoolean("auto", true)
     fun setAuto(c: Context, v: Boolean) = sp(c).edit().putBoolean("auto", v).apply()
 
+    fun page(c: Context, key: String): Int = sp(c).getInt("page_$key", 0)
+    fun setPage(c: Context, key: String, v: Int) = sp(c).edit().putInt("page_$key", v).apply()
+
+    fun busy(c: Context): Boolean = sp(c).getLong("busy_until", 0L) > System.currentTimeMillis()
+    fun setBusy(c: Context, on: Boolean) =
+        sp(c).edit().putLong("busy_until", if (on) System.currentTimeMillis() + 20_000L else 0L).apply()
+
     fun place(c: Context): Place? {
         val s = sp(c)
         val name = s.getString("place_name", null) ?: return null
