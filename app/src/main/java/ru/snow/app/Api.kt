@@ -31,6 +31,10 @@ object Api {
             "&start_date=$start&end_date=$end&daily=snowfall_sum&timezone=auto"
     )
 
+    fun seasonal(lat: Double, lon: Double, daily: String): JSONObject = get(
+        "https://seasonal-api.open-meteo.com/v1/seasonal?latitude=$lat&longitude=$lon&daily=$daily&timezone=auto"
+    )
+
     fun search(q: String): List<Place> {
         val j = get(
             "https://geocoding-api.open-meteo.com/v1/search?name=${URLEncoder.encode(q, "UTF-8")}" +

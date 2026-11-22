@@ -54,6 +54,10 @@ object Climo {
         return anchor.plusDays(offsets[offsets.size / 2].toLong()) to offsets.size
     }
 
+    fun fmtDay(epochDay: Int): String =
+        SimpleDateFormat("d MMMM", Locale("ru")).apply { timeZone = TimeZone.getTimeZone("UTC") }
+            .format(Date(epochDay * 86_400_000L))
+
     fun withTypical(c: Context, w: Weather): Weather = try {
         val last = w.ahead.lastOrNull()?.time
         val anchor = if (last != null) Instant.ofEpochSecond(last).atZone(ZoneId.of(w.tz)).toLocalDate() else LocalDate.now()

@@ -42,6 +42,7 @@ object Prefs {
         if (old == null || abs(old.lat - p.lat) > 0.05 || abs(old.lon - p.lon) > 0.05) {
             e.remove("snap")
             e.remove("climo")
+            e.remove("seasonal")
         }
         e.apply()
     }
@@ -50,7 +51,7 @@ object Prefs {
         val s = sp(c).getString("snap", null) ?: return null
         return try {
             val j = JSONObject(s)
-            Climo.withTypical(c, parseWeather(j.getJSONObject("raw"), j.getString("city"), j.getLong("at")))
+            Seasonal.withSeasonal(c, Climo.withTypical(c, parseWeather(j.getJSONObject("raw"), j.getString("city"), j.getLong("at"))))
         } catch (e: Exception) {
             null
         }
@@ -73,6 +74,31 @@ object Prefs {
         val j = JSONObject().put("lat", p.lat).put("lon", p.lon).put("at", System.currentTimeMillis())
             .put("end", end).put("days", org.json.JSONArray(days))
         sp(c).edit().putString("climo", j.toString()).apply()
+    }
+
+    class SeasonalData(val lat: Double, val lon: Double, val at: Long, val end: Int, val members: List<IntArray>)
+
+    fun seasonal(c: Context): SeasonalData? {
+        val s = sp(c).getString("seasonal", null) ?: return null
+        return try {
+            val j = JSONObject(s)
+            val m = j.getJSONArray("m")
+            val list = (0 until m.length()).map { i ->
+                val a = m.getJSONArray(i)
+                IntArray(a.length()) { a.getInt(it) }
+            }
+            SeasonalData(j.getDouble("lat"), j.getDouble("lon"), j.getLong("at"), j.getInt("end"), list)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun saveSeasonal(c: Context, p: Place, end: Int, members: List<IntArray>) {
+        val arr = org.json.JSONArray()
+        members.forEach { m -> arr.put(org.json.JSONArray(m.toList())) }
+        val j = JSONObject().put("lat", p.lat).put("lon", p.lon).put("at", System.currentTimeMillis())
+            .put("end", end).put("m", arr)
+        sp(c).edit().putString("seasonal", j.toString()).apply()
     }
 
     fun saveSnapshot(c: Context, raw: JSONObject, city: String, at: Long) {

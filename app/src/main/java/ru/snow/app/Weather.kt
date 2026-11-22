@@ -38,6 +38,10 @@ data class Weather(
     val history: List<Hour>,
     val typicalDate: String? = null,
     val typicalYears: Int = 0,
+    val seasonalDate: String? = null,
+    val seasonalRange: String? = null,
+    val seasonalNoSnow: Boolean = false,
+    val seasonalDays: Int = 100,
 )
 
 data class DaySummary(val label: String, val min: Double?, val max: Double?, val snow: String, val periods: String?)
@@ -202,18 +206,30 @@ fun Weather.nextSnowBody(): String {
     }
 }
 
-/** Если в прогнозе снега нет — когда он обычно приходит по данным прошлых лет. */
-fun Weather.typicalLine(): String? {
-    if (nextSnow() != null || ahead.none { it.time > now }) return null
-    val d = typicalDate ?: return null
-    return "Обычно снег приходит около $d (по данным за $typicalYears лет)"
+private fun Weather.seasonalLine(): String? = when {
+    seasonalDate != null -> "Сезонный прогноз (низкая точность): снег около $seasonalDate" + (seasonalRange?.let { ", чаще всего $it" } ?: "")
+    seasonalNoSnow -> "Сезонный прогноз (низкая точность): в ближайшие $seasonalDays дн. снега нет"
+    else -> null
 }
 
-/** Одна строка: ближайший снег, а при его отсутствии в прогнозе — типичная дата. */
+/** Если в прогнозе на 16 суток снега нет: сезонный прогноз до 100 дней и типичная дата по прошлым годам. */
+fun Weather.typicalLine(): String? {
+    if (nextSnow() != null || ahead.none { it.time > now }) return null
+    val clim = typicalDate?.let { "Обычно снег приходит около $it (по данным за $typicalYears лет)" }
+    return listOfNotNull(seasonalLine(), clim).joinToString("\n").ifEmpty { null }
+}
+
+/** Одна строка: ближайший снег, а при его отсутствии в прогнозе — сезонный прогноз или типичная дата. */
 fun Weather.nextSnowLine(): String {
     val base = "${nextSnowTitle()}: ${nextSnowBody()}"
-    val d = typicalDate
-    return if (nextSnow() == null && d != null && ahead.any { it.time > now }) "$base. Обычно около $d" else base
+    if (nextSnow() != null || ahead.none { it.time > now }) return base
+    val extra = when {
+        seasonalDate != null -> "Сезонный прогноз: около $seasonalDate"
+        seasonalNoSnow -> "Сезонный прогноз: $seasonalDays дн. без снега"
+        typicalDate != null -> "Обычно около $typicalDate"
+        else -> null
+    }
+    return if (extra != null) "$base. $extra" else base
 }
 
 /** Короткая строка для виджетов. */
@@ -226,6 +242,8 @@ fun Weather.nextSnowShort(): String {
         n != null && status().snowing() -> "Снова ${whenText(n.time)}"
         n != null -> "Снег ${whenText(n.time)}"
         status().snowing() && fut.all { it.snowy } -> "Снег не прекратится ${horizonText()}"
+        seasonalDate != null -> "Снег около $seasonalDate (сезонный прогноз)"
+        seasonalNoSnow -> "Без снега $seasonalDays дн. (сезонный прогноз)"
         typ != null -> "Обычно снег около $typ"
         status().snowing() -> "Затем без снега ${horizonText()}"
         else -> "Без снега ближайшие ${horizonText()}"

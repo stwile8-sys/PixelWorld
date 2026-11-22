@@ -16,6 +16,13 @@ object Repo {
             if (now == null || now.lat != p.lat || now.lon != p.lon) return@withContext false
             Prefs.saveSnapshot(c, raw, now.name, System.currentTimeMillis())
             try {
+                Seasonal.ensure(c, now)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // сезонный прогноз необязателен
+            }
+            try {
                 Climo.ensure(c, now)
             } catch (e: CancellationException) {
                 throw e

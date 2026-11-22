@@ -116,7 +116,7 @@ private fun SmallContent(c: Context, w: Weather?, city: String?) {
             val typ = w.typicalLine()
             if (typ != null) {
                 Spacer(GlanceModifier.height(4.dp))
-                Text(typ, style = TextStyle(color = p.sec, fontSize = 11.sp), maxLines = 3)
+                Text(typ, style = TextStyle(color = p.sec, fontSize = 11.sp), maxLines = 6)
             }
         }
     }
@@ -150,7 +150,7 @@ private fun MediumContent(c: Context, w: Weather?, city: String?) {
                 Spacer(GlanceModifier.height(4.dp))
                 Text(w.nextSnowBody().cap(), style = TextStyle(color = p.text, fontSize = 17.sp, fontWeight = FontWeight.Medium), maxLines = 2)
                 val typ = w.typicalLine()
-                if (typ != null) Text(typ, style = TextStyle(color = p.sec, fontSize = 11.sp), maxLines = 2)
+                if (typ != null) Text(typ, style = TextStyle(color = p.sec, fontSize = 11.sp), maxLines = 4)
             }
         }
         Column(GlanceModifier.fillMaxHeight(), horizontalAlignment = Alignment.Horizontal.End) {
@@ -224,7 +224,7 @@ private fun LargeContent(c: Context, w: Weather?, city: String?) {
                 Text(
                     w.nextSnowLine(),
                     style = TextStyle(color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium),
-                    maxLines = 3,
+                    maxLines = 4,
                 )
                 Spacer(GlanceModifier.height(10.dp))
                 if (w.hours.isEmpty()) {
@@ -249,7 +249,7 @@ private fun LargeContent(c: Context, w: Weather?, city: String?) {
                 val a = w.nextSnowAmount()
                 if (a != null) Text(a, style = TextStyle(color = p.sec, fontSize = 12.sp))
                 val typ = w.typicalLine()
-                if (typ != null) Text(typ, style = TextStyle(color = p.sec, fontSize = 12.sp), maxLines = 2)
+                if (typ != null) Text(typ, style = TextStyle(color = p.sec, fontSize = 11.sp), maxLines = 4)
                 Spacer(GlanceModifier.height(10.dp))
                 w.forecastDays().take(4).forEach { d ->
                     Row(GlanceModifier.fillMaxWidth().padding(vertical = 3.dp)) {
