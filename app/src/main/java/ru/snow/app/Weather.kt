@@ -200,6 +200,20 @@ fun Weather.nextSnowBody(): String {
     }
 }
 
+/** Короткая строка для виджетов. */
+fun Weather.nextSnowShort(): String {
+    val fut = ahead.filter { it.time > now }
+    if (fut.isEmpty()) return "Ближайший снег: нет данных"
+    val n = nextSnow()
+    return when {
+        n != null && status().snowing() -> "Снова ${whenText(n.time)}"
+        n != null -> "Снег ${whenText(n.time)}"
+        status().snowing() && fut.all { it.snowy } -> "Снег не прекратится ${horizonText()}"
+        status().snowing() -> "Затем без снега ${horizonText()}"
+        else -> "Без снега ближайшие ${horizonText()}"
+    }
+}
+
 fun Weather.nextSnowAmount(): String? {
     val n = nextSnow() ?: return null
     var cm = 0.0

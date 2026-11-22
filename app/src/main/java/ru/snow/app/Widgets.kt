@@ -103,7 +103,9 @@ private fun SmallContent(c: Context, w: Weather?, city: String?) {
             val t = fmtTemp(w.temp)
             if (t != null) {
                 Text(t, style = TextStyle(color = p.text, fontSize = 38.sp, fontWeight = FontWeight.Normal))
-                Text(st?.title ?: "Нет данных", style = TextStyle(color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 2)
+                Text(st?.title ?: "Нет данных", style = TextStyle(color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                Spacer(GlanceModifier.height(2.dp))
+                Text(w.nextSnowShort(), style = TextStyle(color = p.accent, fontSize = 12.sp), maxLines = 2)
             } else {
                 Text("Нет данных", style = TextStyle(color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Medium))
             }
@@ -132,8 +134,9 @@ private fun MediumContent(c: Context, w: Weather?, city: String?) {
             } else if (page == 0) {
                 val t = fmtTemp(w.temp)
                 if (t != null) {
-                    Text(t, style = TextStyle(color = p.text, fontSize = 42.sp, fontWeight = FontWeight.Normal))
+                    Text(t, style = TextStyle(color = p.text, fontSize = 36.sp, fontWeight = FontWeight.Normal))
                     Text(st?.title ?: "Нет данных", style = TextStyle(color = p.text, fontSize = 15.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                    Text(w.nextSnowShort(), style = TextStyle(color = p.accent, fontSize = 12.sp), maxLines = 1)
                 } else {
                     Text("Нет данных", style = TextStyle(color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Medium))
                 }
@@ -213,8 +216,8 @@ private fun LargeContent(c: Context, w: Weather?, city: String?) {
             if (page == 0) {
                 Text(
                     "${w.nextSnowTitle()}: ${w.nextSnowBody()}",
-                    style = TextStyle(color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Medium),
-                    maxLines = 1,
+                    style = TextStyle(color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                    maxLines = 2,
                 )
                 Spacer(GlanceModifier.height(10.dp))
                 if (w.hours.isEmpty()) {

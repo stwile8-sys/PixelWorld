@@ -83,7 +83,8 @@ class SnowViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshIfStale() {
         if (Prefs.place(ctx) == null) return
         val w = _ui.value.weather
-        if (w == null || System.currentTimeMillis() - w.updatedAt > 10 * 60_000L) refresh()
+        // Сохранённые данные без прогноза на 7 суток (старая версия) тоже считаем устаревшими.
+        if (w == null || w.ahead.size < 100 || System.currentTimeMillis() - w.updatedAt > 10 * 60_000L) refresh()
     }
 
     fun useLocation() {
